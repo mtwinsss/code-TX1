@@ -1,3 +1,27 @@
+//Chuong trinh chinh
+package nhom7.Tx1;
+
+public class RegistrationService {
+
+    // Phương thức kiểm tra tính hợp lệ của dữ liệu 1 form đăng ký sự kiện
+    public String registerEvent(String name, String email, String event) {
+        if (name == null || name.isEmpty()) {
+            return "Họ và tên không được để trống.";
+        }
+        if (email == null || email.isEmpty()) {
+            return "Email không được để trống.";
+        }
+        if (event == null || event.isEmpty()) {
+            return "Chọn sự kiện không được để trống.";
+        }
+        // Giả sử quá trình đăng ký thành công
+        return "Đăng ký thành công cho sự kiện: " + event;
+    }
+}
+
+
+
+//Kiểm thử
 package nhom7.Tx1;
 
 import static org.junit.jupiter.api.Assertions.*;
