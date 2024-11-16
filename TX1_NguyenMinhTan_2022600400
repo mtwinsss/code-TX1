@@ -1,1 +1,52 @@
+package nhom7.Tx1;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import org.junit.jupiter.api.Test;
+
+public class RegistrationServiceTest {
+
+    private RegistrationService registrationService;
+
+    
+    public void setUp() {
+        // Khởi tạo đối tượng RegistrationService
+        registrationService = new RegistrationService();
+    }
+
+    @Test
+    public void testRegisterEventWithValidData() {
+        // Kiểm tra đăng ký với dữ liệu không hợp lệ
+        String result = registrationService.registerEvent("Nguyễn Văn @$$$#$", "nguyen.vana@example.com", "Sự kiện 1");
+        assertEquals("Đăng ký thành công cho sự kiện: Sự kiện 1", result, "Đăng ký không thành công với dữ liệu hợp lệ.");
+    }
+
+    @Test
+    public void testRegisterEventWithMissingName() {
+        // Kiểm tra khi thiếu họ tên
+        String result = registrationService.registerEvent(" ", "nguyen.vana@example.com", "Sự kiện 1");
+        assertEquals("Họ và tên không được để trống.", result, "Thông báo lỗi không đúng khi thiếu họ tên.");
+    }
+
+    @Test
+    public void testRegisterEventWithMissingEmail() {
+        // Kiểm tra khi thiếu email
+        String result = registrationService.registerEvent("Nguyễn Văn A", "", "Sự kiện 1");
+        assertEquals("Email không được để trống.", result, "Thông báo lỗi không đúng khi thiếu email.");
+    }
+
+    @Test
+    public void testRegisterEventWithMissingEvent() {
+        // Kiểm tra khi thiếu sự kiện
+        String result = registrationService.registerEvent("Nguyễn Văn A", "nguyen.vana@example.com", "");
+        assertEquals("Chọn sự kiện không được để trống.", result, "Thông báo lỗi không đúng khi thiếu sự kiện.");
+    }
+
+    @Test
+    public void testRegisterEventWithAllFieldsEmpty() {
+        // Kiểm tra khi tất cả các trường đều trống
+        String result = registrationService.registerEvent("", "", "");
+        assertEquals("Họ và tên không được để trống.", result, "Thông báo lỗi không đúng khi tất cả các trường đều trống.");
+    }
+}
 
