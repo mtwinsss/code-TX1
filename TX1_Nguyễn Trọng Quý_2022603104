@@ -1,0 +1,140 @@
+//Chương trình chính
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Linq;
+using System.Data.Entity;
+using System.Net;
+using NguyenChiCong.Controllers;
+using NguyenChiCong.Models;
+
+namespace UnitTestProject1
+{
+    
+    [TestClass]
+    public class QuyTest
+    {
+        private Mock<HttpContextBase> _httpContextMock;
+        private Mock<HttpPostedFileBase> _fileMock;
+        private Mock<DbSet<Category>> _mockCategories;
+        private Mock<BaseAppDbContext> _mockDbContext;
+        private CategoriesController _controller;
+
+        
+        [TestInitialize]
+        public void Initialize()
+        {
+           
+            _httpContextMock = new Mock<HttpContextBase>();
+            _fileMock = new Mock<HttpPostedFileBase>();
+
+           
+            _mockCategories = new Mock<DbSet<Category>>();
+            _mockDbContext = new Mock<BaseAppDbContext>();
+
+            
+            _mockDbContext.Setup(m => m.Categories).Returns(_mockCategories.Object);
+
+            _controller = new CategoriesController(_mockDbContext.Object);
+
+            
+            _controller = new CategoriesController(_mockDbContext.Object)
+            {
+                ControllerContext = new ControllerContext(_httpContextMock.Object, new RouteData(), _controller)
+            };
+        }
+
+        #region Create Tests
+
+        [TestMethod]
+        public void Create_WithoutFile_UploadsImageAndAddsCategory()
+        {
+            
+            var category = new Category { CategoryID = 1, CategoryName = "Test Category" };
+            _httpContextMock.Setup(ctx => ctx.Request.Files["ImageFile"]).Returns(_fileMock.Object);
+            _fileMock.Setup(f => f.ContentLength).Returns(100); // Giả lập có file
+            _fileMock.Setup(f => f.FileName).Returns("image.jpg");
+
+            
+            var result = _controller.Create(category) as RedirectToRouteResult;
+
+      
+            Assert.IsNotNull(result); 
+            Assert.AreEqual("Index", result.RouteValues["action"]); 
+        }
+
+        
+        [TestMethod]
+        public void Create_WithFile_SavesCategoryWithoutImage()
+        {
+            
+            var category = new Category { CategoryID = 2, CategoryName = "Test Category Without File" };
+            _httpContextMock.Setup(ctx => ctx.Request.Files["ImageFile"]).Returns((HttpPostedFileBase)null);
+
+            
+            var result = _controller.Create(category) as RedirectToRouteResult;
+
+            
+            _mockCategories.Verify(m => m.Add(It.IsAny<Category>()), Times.Once); 
+            _mockDbContext.Verify(m => m.SaveChanges(), Times.Once); 
+            Assert.IsNotNull(result); 
+            Assert.AreEqual("Index", result.RouteValues["action"]); 
+        }
+
+        [TestMethod]
+        public void Create_InvalidModel_ReturnsView()
+        {
+           
+            var category = new Category { CategoryID = 3, CategoryName = "" };
+
+//Kiểm thử
+_controller.ModelState.AddModelError("CategoryName", "Required");
+
+           
+            var result = _controller.Create(category) as ViewResult;
+
+            
+            Assert.IsNull(result); 
+        }
+
+        #endregion
+
+        #regionq71 Edit Tests
+
+        
+        [TestMethod]
+        public void Edit_WithoutFile_UpdatesCategoryWithoutImage()
+        {
+            
+            var category = new Category { CategoryID = 2, CategoryName = "Updated Category Without File" };
+            _httpContextMock.Setup(ctx => ctx.Request.Files["ImageFile"]).Returns((HttpPostedFileBase)null);
+
+            
+            var result = _controller.Edit(category) as RedirectToRouteResult;
+
+            
+            _mockDbContext.Verify(m => m.SaveChanges(), Times.Once); 
+            Assert.IsNotNull(result); 
+            Assert.AreEqual("Index", result.RouteValues["action"]); 
+        }
+
+        
+        [TestMethod]
+        public void Edit_InvalidModel_ReturnsView()
+        {
+            
+            var category = new Category { CategoryID = 3, CategoryName = "" }; 
+            _controller.ModelState.AddModelError("CategoryName", "Required");
+
+            
+            var result = _controller.Edit(category) as ViewResult;
+
+            
+            Assert.IsNull(result); // 
+        }
+
+        #endregion
+    }
+}
