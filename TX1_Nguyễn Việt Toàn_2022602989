@@ -1,0 +1,156 @@
+//Chương trình chính
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Web;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using NguyenChiCong.Controllers;
+using NguyenChiCong.Models;
+using System.Data.Entity;
+
+namespace UnitTestProject1
+{
+    [TestClass]
+    public class ToanTest
+    {
+        private Mock<HttpContextBase> _httpContextMock;
+        private Mock<HttpPostedFileBase> _fileMock;
+        private Mock<DbSet<Slide>> _mockSlides;
+        private Mock<BaseAppDbContext> _mockDbContext;
+        private SlidesController _controller;
+
+        
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            
+            _httpContextMock = new Mock<HttpContextBase>();
+            
+            _fileMock = new Mock<HttpPostedFileBase>();
+            
+            _mockSlides = new Mock<DbSet<Slide>>();
+            
+            _mockDbContext = new Mock<BaseAppDbContext>();
+            _mockDbContext.Setup(m => m.Slides).Returns(_mockSlides.Object);
+
+           
+            _controller = new SlidesController(_mockDbContext.Object);
+
+            _controller = new SlidesController(_mockDbContext.Object)
+            {
+                ControllerContext = new ControllerContext(_httpContextMock.Object, new RouteData(), _controller)
+            };
+        }
+
+        
+        [TestMethod]
+        public void Create_ValidModelWithFile_SavesSlideAndRedirects()
+        {
+           
+            var slide = new Slide { SlideID = 1 };
+            _fileMock.Setup(f => f.ContentLength).Returns(100); 
+            _fileMock.Setup(f => f.FileName).Returns("image.jpg"); 
+            _httpContextMock.Setup(ctx => ctx.Request.Files["ImageFile"]).Returns(_fileMock.Object); 
+            _httpContextMock.Setup(ctx => ctx.Server.MapPath(It.IsAny<string>())).Returns("C:\\image.jpg");
+
+            
+            var result = _controller.Create(slide) as RedirectToRouteResult;
+
+            
+            _fileMock.Verify(f => f.SaveAs(It.IsAny<string>()), Times.Once); 
+            _mockSlides.Verify(m => m.Add(It.IsAny<Slide>()), Times.Once); 
+            _mockDbContext.Verify(m => m.SaveChanges(), Times.Once); 
+            Assert.IsNotNull(result); 
+            Assert.AreEqual("Index", result.RouteValues["action"]); 
+        }
+
+       
+        [TestMethod]
+        public void Create_ValidModelWithoutFile_SavesSlideWithoutImageAndRedirects()
+        {
+            
+            var slide = new Slide { SlideID = 1 };
+            _httpContextMock.Setup(ctx => ctx.Request.Files["ImageFile"]).Returns((HttpPostedFileBase)null); 
+
+            
+            var result = _controller.Create(slide) as RedirectToRouteResult;
+
+            
+            _mockSlides.Verify(m => m.Add(It.IsAny<Slide>()), Times.Once); 
+            _mockDbContext.Verify(m => m.SaveChanges(), Times.Once);
+            
+            Assert.IsNotNull(result);
+
+
+
+
+
+//Kiểm thử
+Assert.AreEqual("Index", result.RouteValues["action"]); 
+        }
+
+        
+        [TestMethod]
+        public void Create_InvalidModel_ReturnsViewWithSlide()
+        {
+            
+            var slide = new Slide { SlideID = 1 };
+            _controller.ModelState.AddModelError("Images", "Required"); 
+
+            //
+            var result = _controller.Create(slide) as ViewResult;
+
+            //
+            Assert.IsNotNull(result); 
+            Assert.AreEqual(slide, result.Model); 
+        }
+
+        
+        [TestMethod]
+        public void Edit_ValidModelWithFile_UpdatesSlideAndRedirects()
+        {
+            
+            var slide = new Slide { SlideID = 1, Images = "old.jpg" };
+            _fileMock.Setup(f => f.ContentLength).Returns(100); 
+            _fileMock.Setup(f => f.FileName).Returns("new.jpg"); 
+            _httpContextMock.Setup(ctx => ctx.Request.Files["ImageFile"]).Returns(_fileMock.Object); 
+            _httpContextMock.Setup(ctx => ctx.Server.MapPath(It.IsAny<string>())).Returns("C:\\new.jpg"); 
+
+            //
+            var result = _controller.Edit(slide) as RedirectToRouteResult;
+
+            
+            _fileMock.Verify(f => f.SaveAs(It.IsAny<string>()), Times.Once); 
+            _mockDbContext.Verify(m => m.SaveChanges(), Times.Once); 
+            Assert.IsNotNull(result); 
+            Assert.AreEqual("Index", result.RouteValues["action"]); 
+        }
+
+        
+        [TestMethod]
+        public void Edit_InvalidModel_ReturnsViewWithSlide()
+        {
+            
+            var slide = new Slide { SlideID = 1, Images = "old.jpg" };
+            _controller.ModelState.AddModelError("Images", "Required"); 
+
+            
+            var result = _controller.Edit(slide) as ViewResult;
+
+            
+            Assert.IsNotNull(result); 
+            Assert.AreEqual(slide, result.Model); 
+        }
+    }
+}
+
+
+
+
+
+
