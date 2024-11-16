@@ -1,0 +1,129 @@
+//Chương trình chính
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
+using NguyenChiCong.Controllers;
+using NguyenChiCong.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Web.Mvc;
+using System.Web.Routing;
+using System.Web;
+using System.Data.Entity;
+
+namespace UnitTestProject1
+{
+    [TestClass]
+    public class TaiTest
+    {
+        private Mock<HttpContextBase> _httpContextMock;
+        private Mock<HttpPostedFileBase> _fileMock;
+        private Mock<DbSet<Product>> _mockProducts;
+        private Mock<DbSet<Product_Size>> _mockProductSizes;
+        private Mock<BaseAppDbContext> _mockDbContext;
+        private ProductsController _controller;
+
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            
+            _httpContextMock = new Mock<HttpContextBase>();
+            
+            _fileMock = new Mock<HttpPostedFileBase>();
+            
+            _mockProducts = new Mock<DbSet<Product>>();
+           
+            _mockProductSizes = new Mock<DbSet<Product_Size>>();
+            
+            _mockDbContext = new Mock<BaseAppDbContext>();
+            _mockDbContext.Setup(m => m.Products).Returns(_mockProducts.Object);
+            _mockDbContext.Setup(m => m.Product_Size).Returns(_mockProductSizes.Object);
+            
+            _controller = new ProductsController(_mockDbContext.Object); 
+            
+            _controller = new ProductsController(_mockDbContext.Object)
+            {
+                ControllerContext = new ControllerContext(_httpContextMock.Object, new RouteData(), _controller)
+            };
+        }
+
+        [TestMethod]
+        public void Create_ValidProductWithFile_SavesProductAndRedirects()
+        {
+            
+            var product = new Product { ProductID = 1, ProductName = "Test Product" };
+            _fileMock.Setup(f => f.ContentLength).Returns(100); 
+            _fileMock.Setup(f => f.FileName).Returns("image.jpg"); 
+            _httpContextMock.Setup(ctx => ctx.Request.Files["ImageFile"]).Returns(_fileMock.Object); 
+            _httpContextMock.Setup(ctx => ctx.Server.MapPath(It.IsAny<string>())).Returns("C:\\image.jpg"); 
+
+           
+            var result = _controller.Create(product) as RedirectToRouteResult;
+
+            
+            _fileMock.Verify(f => f.SaveAs(It.IsAny<string>()), Times.Once); 
+            _mockProducts.Verify(m => m.Add(It.IsAny<Product>()), Times.Once); 
+            _mockProductSizes.Verify(m => m.Add(It.IsAny<Product_Size>()), Times.Once); 
+            _mockDbContext.Verify(m => m.SaveChanges(), Times.Once); 
+            Assert.IsNotNull(result); 
+            Assert.AreEqual("Index", result.RouteValues["action"]); 
+        }
+
+
+
+
+//Kiểm thử
+_httpContextMock.Setup(ctx => ctx.Request.Files["ImageFile"]).Returns((HttpPostedFileBase)null);
+
+            
+            var result = _controller.Create(product) as RedirectToRouteResult;
+
+            
+            _mockProducts.Verify(m => m.Add(It.IsAny<Product>()), Times.Once);
+            _mockProductSizes.Verify(m => m.Add(It.IsAny<Product_Size>()), Times.Once);
+            _mockDbContext.Verify(m => m.SaveChanges(), Times.Once);
+            Assert.IsNotNull(result);
+            Assert.AreEqual("Index", result.RouteValues["action"]);
+        }
+
+        [TestMethod]
+        public void Edit_ValidProductWithFile_UpdatesProductAndRedirects()
+        {
+            
+            var product = new Product { ProductID = 3, ProductName = "Test Product" };
+            _fileMock.Setup(f => f.ContentLength).Returns(100);
+            _fileMock.Setup(f => f.FileName).Returns("newImage.jpg");
+            _httpContextMock.Setup(ctx => ctx.Request.Files["ImageFile"]).Returns(_fileMock.Object);
+            _httpContextMock.Setup(ctx => ctx.Server.MapPath(It.IsAny<string>())).Returns("C:\\newImage.jpg");
+
+            
+            var result = _controller.Edit(product) as RedirectToRouteResult;
+
+            _fileMock.Verify(f => f.SaveAs(It.IsAny<string>()), Times.Once); 
+            _mockDbContext.Verify(m => m.SaveChanges(), Times.Once); 
+            Assert.IsNotNull(result); 
+            Assert.AreEqual("Index", result.RouteValues["action"]); 
+        }
+
+        [TestMethod]
+        public void Edit_InvalidModel_ReturnsViewWithProduct()
+        {
+            
+            var product = new Product { ProductID = 4, ProductName = "Invalid Product" };
+            _controller.ModelState.AddModelError("ProductName", "Required");
+
+            
+            var result = _controller.Edit(product) as ViewResult;
+
+            Assert.IsNull(result); 
+        }
+    }
+}
+
+        [TestMethod]
+        public void Create_ValidProductWithoutFile_SavesProductAndRedirects()
+        {
+            
+            var product = new Product { ProductID = 2, ProductName = "Test Product Without File" };
